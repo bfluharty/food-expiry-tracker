@@ -2,7 +2,7 @@ name: Deploy pantry PWA
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
