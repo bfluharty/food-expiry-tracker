@@ -272,6 +272,21 @@ function showItemDialog(id?: string): void {
   dialog.querySelector<HTMLInputElement>('#item-name')?.focus();
 }
 
+function showDeleteConfirmation(id: string): void {
+  const item = state.items.find((candidate) => candidate.id === id);
+  const dialog = document.querySelector<HTMLDialogElement>('#item-dialog');
+  if (!item || !dialog) return;
+  state.editingId = undefined;
+  dialog.innerHTML = `
+    <section class="delete-confirmation" aria-labelledby="delete-confirmation-title">
+      <div class="dialog-heading"><div><p class="eyebrow">REMOVE FROM YOUR PANTRY</p><h2 id="delete-confirmation-title">Delete this food?</h2></div><button type="button" class="close-button" data-action="cancel-delete" aria-label="Close">×</button></div>
+      <p class="settings-copy">Are you sure you want to delete <strong>${escapeHtml(item.name)}</strong>? You can undo this from the confirmation message.</p>
+      <div class="dialog-actions"><button type="button" class="button secondary" data-action="cancel-delete">Keep item</button><button type="button" class="button danger" data-action="confirm-delete" data-id="${escapeHtml(id)}">Delete food</button></div>
+    </section>`;
+  dialog.showModal();
+  dialog.querySelector<HTMLButtonElement>('[data-action="cancel-delete"]')?.focus();
+}
+
 function formInput(form: HTMLFormElement): FoodItemInput {
   const data = new FormData(form);
   const name = String(data.get('name') ?? '').trim();
@@ -445,6 +460,9 @@ app.addEventListener('click', async (event) => {
     } else if (action === 'close-dialog') {
       document.querySelector<HTMLDialogElement>('#item-dialog')?.close();
       return;
+    } else if (action === 'cancel-delete') {
+      document.querySelector<HTMLDialogElement>('#item-dialog')?.close();
+      return;
     }
     else if (action === 'dismiss') state.error = state.notice = undefined;
     else if (action === 'show-expiring') {
@@ -489,18 +507,22 @@ app.addEventListener('click', async (event) => {
       else flash('Persistent storage is enabled.');
       return;
     } else if (action === 'delete' && id) {
+      showDeleteConfirmation(id);
+      return;
+    } else if (action === 'confirm-delete' && id) {
       const item = state.items.find((candidate) => candidate.id === id);
-      if (item && window.confirm(`Delete ${item.name} from your pantry?`)) {
-        await repository.delete(id);
-        scheduleSync();
-        await reload();
-        const toast = document.querySelector<HTMLElement>('#toast');
-        if (toast) {
-          toast.innerHTML = `Removed ${escapeHtml(item.name)} <button data-action="undo" data-id="${escapeHtml(id)}">Undo</button>`;
-          toast.classList.add('visible');
-        }
-        window.setTimeout(() => document.querySelector('#toast')?.classList.remove('visible'), 5000);
+      if (!item) throw new Error('The item no longer exists.');
+      document.querySelector<HTMLDialogElement>('#item-dialog')?.close();
+      await repository.delete(id);
+      scheduleSync();
+      state.notice = `Removed ${item.name} from your pantry.`;
+      await reload();
+      const toast = document.querySelector<HTMLElement>('#toast');
+      if (toast) {
+        toast.innerHTML = `Removed ${escapeHtml(item.name)} <button data-action="undo" data-id="${escapeHtml(id)}">Undo</button>`;
+        toast.classList.add('visible');
       }
+      window.setTimeout(() => document.querySelector('#toast')?.classList.remove('visible'), 5000);
       return;
     } else if (action === 'undo' && id) {
       const item = state.items.find((candidate) => candidate.id === id);

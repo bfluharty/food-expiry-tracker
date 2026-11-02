@@ -40,6 +40,8 @@ h1 { font: 800 clamp(28px, 4vw, 38px) Manrope, sans-serif; letter-spacing: -1.5p
 .button.primary:hover { background: var(--forest-soft); }
 .button.secondary { color: #3b574a; background: #fff; border-color: #e1e6df; }
 .button.secondary:hover { background: #f1f5ef; }
+.button.danger { color: #fff; background: #a8433c; }
+.button.danger:hover { background: #89362f; }
 .add-button { min-width: 130px; }
 .alert-banner { display: flex; width: 100%; align-items: center; gap: 12px; border: 1px solid #f1d7ad; background: #fff7e9; color: #714f1e; text-align: left; border-radius: 12px; padding: 14px 18px; }
 .alert-icon { width: 27px; height: 27px; flex: none; display: grid; place-items: center; background: #f6e5c7; border-radius: 50%; font-weight: 800; }
@@ -160,6 +162,9 @@ h1 { font: 800 clamp(28px, 4vw, 38px) Manrope, sans-serif; letter-spacing: -1.5p
 dialog { padding: 0; border: 1px solid #e8eae4; border-radius: 15px; width: min(520px, calc(100vw - 28px)); max-height: min(92vh, 780px); box-shadow: 0 24px 80px #183c3133; color: #293e34; }
 dialog::backdrop { background: #183c3155; backdrop-filter: blur(2px); }
 .item-form { padding: 23px 25px 20px; }
+.delete-confirmation { padding: 23px 25px 20px; }
+.delete-confirmation > p { margin-bottom: 0; }
+.delete-confirmation > p strong { color: #31483c; }
 .dialog-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
 .dialog-heading .eyebrow { margin-bottom: 6px; }
 .dialog-heading h2 { font-size: 20px; }
