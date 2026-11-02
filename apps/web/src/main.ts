@@ -158,7 +158,7 @@ function renderDashboard(active: FoodItem[], expiring: FoodItem[], expired: Food
       ${renderFoodList([...expired, ...expiring].slice(0, 4), true)}`
     : `<div class="welcome-card"><div class="welcome-sun">✳</div><div><strong>All clear. Nice work!</strong><p>Nothing needs your attention right now.</p></div></div>`}
     <section class="stat-grid" aria-label="Pantry summary">
-      ${statCard('Total food', active.length, `${totalCalories.toLocaleString()} total cal in your pantry`, 'mint')}
+      ${statCard('Total food', active.length, 'in your pantry', 'mint', `(${totalCalories.toLocaleString()} calories)`)}
       ${statCard('Expiring soon', expiring.length, `within ${alertWindow()} days`, 'amber')}
       ${statCard('Expired', expired.length, 'items to check', 'rose')}
     </section>
@@ -236,8 +236,8 @@ function renderSettings(lastSync: string | null, stale: boolean): string {
     </section>`;
 }
 
-function statCard(title: string, value: number, caption: string, tone: string): string {
-  return `<div class="stat-card ${tone}"><div class="stat-top"><span>${title}</span><span class="stat-spark">↗</span></div><strong>${value}</strong><small>${caption}</small></div>`;
+function statCard(title: string, value: number, caption: string, tone: string, detail = ''): string {
+  return `<div class="stat-card ${tone}"><div class="stat-top"><span>${title}</span><span class="stat-spark">↗</span></div><strong>${value}${detail ? ` <span class="stat-value-detail">${detail}</span>` : ''}</strong><small>${caption}</small></div>`;
 }
 
 function bucketRow(label: string, count: number, tone: string): string {

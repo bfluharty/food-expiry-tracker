@@ -56,8 +56,8 @@ h1 { font: 800 clamp(28px, 4vw, 38px) Manrope, sans-serif; letter-spacing: -1.5p
 .notice.warning { background: #fff7e9; border: 1px solid #f1d7ad; color: #714f1e; }
 .notice.update-notice { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f0f3ff; border: 1px solid #d5dcfa; color: #344274; }
 .notice.update-notice > span { flex: 1; }
-.notice.update-notice .button { position: static; flex: 0 0 auto; min-height: 34px; padding: 0 10px; font-size: 11px; }
-.notice.update-notice .update-later { position: static; flex: 0 0 auto; padding: 4px; font-size: 12px; }
+.notice.update-notice .button { position: static; flex: 0 0 auto; width: auto; max-width: 100%; min-height: 30px; padding: 0 9px; font-family: inherit; font-size: 12px; line-height: 1.2; white-space: nowrap; border-radius: 7px; }
+.notice.update-notice .update-later { position: static; flex: 0 0 auto; width: auto; padding: 4px; font-size: 12px; }
 .notice ul { margin: 8px 0 0; padding-left: 19px; }
 .urgent-heading { display: flex; align-items: center; gap: 9px; margin: 0 0 10px; color: #9c6240; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
 .urgent-rule { height: 1px; background: #eadfd1; flex: 1; }
@@ -93,6 +93,7 @@ h1 { font: 800 clamp(28px, 4vw, 38px) Manrope, sans-serif; letter-spacing: -1.5p
 .stat-top { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; opacity: .8; }
 .stat-spark { font-size: 16px; opacity: .55; }
 .stat-card > strong { display: block; font: 700 31px Manrope, sans-serif; margin: 9px 0 2px; letter-spacing: -1px; }
+.stat-value-detail { font-size: .42em; letter-spacing: 0; vertical-align: .12em; white-space: nowrap; }
 .stat-card > small { font-size: 10px; opacity: .75; }
 .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .card { background: #fff; border: 1px solid #ebece6; border-radius: 13px; }
