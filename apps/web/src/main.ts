@@ -23,7 +23,7 @@ const settingKeys = {
   secret: 'food-expiry.sync-secret',
   lastSync: 'food-expiry.last-sync'
 };
-const defaults = { alertWindow: 90, tab: 'dashboard' as 'dashboard' | 'items' | 'settings' };
+const defaults = { alertWindow: 30, tab: 'dashboard' as 'dashboard' | 'items' | 'settings' };
 const state: {
   items: FoodItem[];
   tab: 'dashboard' | 'items' | 'settings';
