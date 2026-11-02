@@ -127,6 +127,7 @@ function render(): void {
 }
 
 function renderDashboard(active: FoodItem[], expiring: FoodItem[], expired: FoodItem[]): string {
+  const totalCalories = active.reduce((total, item) => total + item.calories * item.quantity, 0);
   const buckets = {
     expired: active.filter((item) => expirationBucket(item, today()) === 'expired'),
     week: active.filter((item) => expirationBucket(item, today()) === 'week'),
@@ -157,7 +158,7 @@ function renderDashboard(active: FoodItem[], expiring: FoodItem[], expired: Food
       ${renderFoodList([...expired, ...expiring].slice(0, 4), true)}`
     : `<div class="welcome-card"><div class="welcome-sun">✳</div><div><strong>All clear. Nice work!</strong><p>Nothing needs your attention right now.</p></div></div>`}
     <section class="stat-grid" aria-label="Pantry summary">
-      ${statCard('Total food', active.length, 'in your pantry', 'mint')}
+      ${statCard('Total food', active.length, `${totalCalories.toLocaleString()} total cal in your pantry`, 'mint')}
       ${statCard('Expiring soon', expiring.length, `within ${alertWindow()} days`, 'amber')}
       ${statCard('Expired', expired.length, 'items to check', 'rose')}
     </section>
