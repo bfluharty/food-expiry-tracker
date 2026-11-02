@@ -485,7 +485,7 @@ app.addEventListener('click', async (event) => {
       return;
     } else if (action === 'delete' && id) {
       const item = state.items.find((candidate) => candidate.id === id);
-      if (item) {
+      if (item && window.confirm(`Delete ${item.name} from your pantry?`)) {
         await repository.delete(id);
         scheduleSync();
         await reload();
