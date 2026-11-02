@@ -36,6 +36,7 @@ const state: {
   editingId?: string;
   error?: string;
   notice?: string;
+  updateAvailable: boolean;
   syncStatus: string;
   syncing: boolean;
   persistStatus: string;
@@ -46,10 +47,13 @@ const state: {
   sort: 'expiration',
   expiringOnly: false,
   search: '',
+  updateAvailable: false,
   syncStatus: 'Not configured',
   syncing: false,
   persistStatus: 'Checking browser storage…'
 };
+let workerRegistration: ServiceWorkerRegistration | undefined;
+let reloadAfterUpdate = false;
 
 function alertWindow(): number {
   const parsed = Number(localStorage.getItem(settingKeys.window));
@@ -97,6 +101,7 @@ function render(): void {
     <section class="page">
       ${state.error ? `<div class="notice error" role="alert">${escapeHtml(state.error)}<button data-action="dismiss" aria-label="Dismiss">×</button></div>` : ''}
       ${state.notice ? `<div class="notice success" role="status">${escapeHtml(state.notice)}<button data-action="dismiss" aria-label="Dismiss">×</button></div>` : ''}
+      ${state.updateAvailable ? '<div class="notice update-notice" role="status"><span>A Pantry update is ready. Restart to use the latest version.</span><button class="button secondary" data-action="apply-update">Restart to update</button><button class="update-later" data-action="dismiss-update" aria-label="Dismiss update notice">Later</button></div>' : ''}
       ${expiring.length || expired.length ? `
         <button class="alert-banner" data-action="show-expiring">
           <span class="alert-icon">!</span>
@@ -463,6 +468,15 @@ app.addEventListener('click', async (event) => {
     } else if (action === 'cancel-delete') {
       document.querySelector<HTMLDialogElement>('#item-dialog')?.close();
       return;
+    } else if (action === 'dismiss-update') {
+      state.updateAvailable = false;
+      render();
+      return;
+    } else if (action === 'apply-update') {
+      if (!workerRegistration?.waiting) throw new Error('The update is no longer waiting. Reload Pantry to check again.');
+      reloadAfterUpdate = true;
+      workerRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      return;
     }
     else if (action === 'dismiss') state.error = state.notice = undefined;
     else if (action === 'show-expiring') {
@@ -649,16 +663,40 @@ function scheduleSync(): void {
   syncTimer = window.setTimeout(() => void syncWhenConfigured(), 1500);
 }
 
+async function registerServiceWorker(): Promise<void> {
+  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
+  workerRegistration = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, {
+    scope: import.meta.env.BASE_URL
+  });
+  const registration = workerRegistration;
+  const showWaitingUpdate = () => {
+    if (!registration.waiting || !navigator.serviceWorker.controller) return;
+    state.updateAvailable = true;
+    render();
+  };
+  showWaitingUpdate();
+  registration.addEventListener('updatefound', () => {
+    const installing = registration.installing;
+    installing?.addEventListener('statechange', () => {
+      if (installing.state === 'installed') showWaitingUpdate();
+    });
+  });
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!reloadAfterUpdate) return;
+    reloadAfterUpdate = false;
+    window.location.reload();
+  });
+}
+
 async function start(): Promise<void> {
   try {
     state.items = await repository.list(true);
     render();
     await syncWhenConfigured();
-    if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-      await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, {
-        scope: import.meta.env.BASE_URL
-      });
-    }
+    await registerServiceWorker();
     if (navigator.storage?.persist) {
       try {
         state.persistStatus = await navigator.storage.persist()

@@ -54,6 +54,10 @@ h1 { font: 800 clamp(28px, 4vw, 38px) Manrope, sans-serif; letter-spacing: -1.5p
 .notice.error { background: #fff0ef; border: 1px solid #f1d1cd; color: #853b33; }
 .notice.success { background: #edf6eb; border: 1px solid #d5e7d1; color: #315d3b; }
 .notice.warning { background: #fff7e9; border: 1px solid #f1d7ad; color: #714f1e; }
+.notice.update-notice { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f0f3ff; border: 1px solid #d5dcfa; color: #344274; }
+.notice.update-notice > span { flex: 1; }
+.notice.update-notice .button { position: static; flex: 0 0 auto; }
+.notice.update-notice .update-later { position: static; flex: 0 0 auto; padding: 4px; font-size: 12px; }
 .notice ul { margin: 8px 0 0; padding-left: 19px; }
 .urgent-heading { display: flex; align-items: center; gap: 9px; margin: 0 0 10px; color: #9c6240; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
 .urgent-rule { height: 1px; background: #eadfd1; flex: 1; }
@@ -172,6 +176,8 @@ dialog::backdrop { background: #183c3155; backdrop-filter: blur(2px); }
 .dialog-actions { display: flex; justify-content: end; gap: 8px; padding-top: 18px; margin-top: 15px; border-top: 1px solid #edf0ea; }
 
 @media (max-width: 760px) {
+  .notice.update-notice { align-items: flex-start; flex-wrap: wrap; }
+  .notice.update-notice > span { flex: 1 1 100%; }
   .topbar { height: 60px; padding: 0 17px; }
   .brand { font-size: 21px; }
   .page { padding: 25px 16px 112px; }

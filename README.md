@@ -39,4 +39,4 @@ After deployment, set the PWA's sync endpoint and the same secret in **Settings*
 
 The workflow in `.github/workflows/pages.yml` deploys the static app on pushes to `master`. Enable GitHub Pages for the repository with **GitHub Actions** as the build source. The Vite base path is configured for the `food-expiry-tracker` project site. The service worker precaches the app shell and production assets for offline use.
 
-Install on Android from Chrome or on iPhone via Safari's **Add to Home Screen**. In Settings, export a CSV backup and request persistent storage; browser data can still be lost if the device or site data is removed.
+Install on Android from Chrome or on iPhone via Safari's **Add to Home Screen**. When an app update is ready, Pantry shows a notice; choose **Restart to update** when convenient. In Settings, export a CSV backup and request persistent storage; browser data can still be lost if the device or site data is removed.
