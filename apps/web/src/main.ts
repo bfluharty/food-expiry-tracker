@@ -133,12 +133,16 @@ function renderDashboard(active: FoodItem[], expiring: FoodItem[], expired: Food
     month: active.filter((item) => expirationBucket(item, today()) === 'month'),
     later: active.filter((item) => expirationBucket(item, today()) === 'later')
   };
-  const byCategory = FOOD_CATEGORIES.map((category) => ({
-    category,
-    items: active.filter((item) => item.category === category)
-  })).filter((group) => group.items.length > 0);
-  const max = Math.max(1, ...byCategory.map((group) =>
-    group.items.reduce((quantity, item) => quantity + item.quantity, 0)));
+  const byCategory = FOOD_CATEGORIES.map((category) => {
+    const items = active.filter((item) => item.category === category);
+    return {
+      category,
+      items,
+      units: items.reduce((total, item) => total + item.quantity, 0),
+      calories: items.reduce((total, item) => total + item.calories * item.quantity, 0)
+    };
+  }).filter((group) => group.items.length > 0);
+  const maxCalories = Math.max(0, ...byCategory.map((group) => group.calories));
   const weeks = Array.from({ length: 8 }, (_, index) => {
     const start = addDays(today(), index * 7);
     const end = addDays(start, 6);
@@ -161,7 +165,7 @@ function renderDashboard(active: FoodItem[], expiring: FoodItem[], expired: Food
       <section class="card category-card">
         <div class="section-title"><div><p class="eyebrow">YOUR INVENTORY</p><h2>By category</h2></div><span class="section-icon">◒</span></div>
         ${byCategory.length ? `<div class="category-bars">${byCategory.map((group) => `
-          <div class="category-row"><div class="category-label"><span>${escapeHtml(group.category)}</span><strong>${group.items.length} <small>${group.items.length === 1 ? 'item' : 'items'} · ${group.items.reduce((quantity, item) => quantity + item.quantity, 0)} total units</small></strong></div><div class="bar-track"><span style="width:${Math.max(8, group.items.reduce((quantity, item) => quantity + item.quantity, 0) / max * 100)}%"></span></div></div>
+          <div class="category-row"><div class="category-label"><span>${escapeHtml(group.category)}</span><strong>${group.items.length} <small>${group.items.length === 1 ? 'item' : 'items'} · ${group.units} total units · ${group.calories.toLocaleString()} total cal</small></strong></div><div class="bar-track"><span style="width:${maxCalories ? group.calories / maxCalories * 100 : 0}%"></span></div></div>
         `).join('')}</div>` : '<p class="empty-note">Add your first food item to see your inventory here.</p>'}
       </section>
       <section class="card expiry-card">
