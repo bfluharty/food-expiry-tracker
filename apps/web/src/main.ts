@@ -32,6 +32,7 @@ const state: {
   category: string;
   sort: string;
   expiringOnly: boolean;
+  expiredOnly: boolean;
   search: string;
   editingId?: string;
   error?: string;
@@ -46,6 +47,7 @@ const state: {
   category: 'all',
   sort: 'expiration',
   expiringOnly: false,
+  expiredOnly: false,
   search: '',
   updateAvailable: false,
   syncStatus: 'Not configured',
@@ -103,7 +105,7 @@ function render(): void {
       ${state.notice ? `<div class="notice success" role="status">${escapeHtml(state.notice)}<button data-action="dismiss" aria-label="Dismiss">×</button></div>` : ''}
       ${state.updateAvailable ? '<div class="notice update-notice" role="status"><span>A Pantry update is ready. Restart to use the latest version.</span><button class="button secondary" data-action="apply-update">Restart to update</button><button class="update-later" data-action="dismiss-update" aria-label="Dismiss update notice">Later</button></div>' : ''}
       ${expiring.length || expired.length ? `
-        <button class="alert-banner" data-action="show-expiring">
+        <button class="alert-banner" data-action="show-attention">
           <span class="alert-icon">!</span>
           <span><strong>${expired.length ? `${expired.length} expired` : ''}${expired.length && expiring.length ? ' · ' : ''}${expiring.length ? `${expiring.length} expiring soon` : ''}</strong><small>Tap to review your food that needs attention</small></span>
           <span class="banner-arrow">→</span>
@@ -158,9 +160,9 @@ function renderDashboard(active: FoodItem[], expiring: FoodItem[], expired: Food
       ${renderFoodList([...expired, ...expiring].slice(0, 4), true)}`
     : `<div class="welcome-card"><div class="welcome-sun">✳</div><div><strong>All clear. Nice work!</strong><p>Nothing needs your attention right now.</p></div></div>`}
     <section class="stat-grid" aria-label="Pantry summary">
-      ${statCard('Total food', active.length, 'in your pantry', 'mint', `(${totalCalories.toLocaleString()} calories)`)}
-      ${statCard('Expiring soon', expiring.length, `within ${alertWindow()} days`, 'amber')}
-      ${statCard('Expired', expired.length, 'items to check', 'rose')}
+      ${statCard('Total food', active.length, 'mint', 'show-total', `(${totalCalories.toLocaleString()} calories)`)}
+      ${statCard('Expiring soon', expiring.length, 'amber', 'show-expiring')}
+      ${statCard('Expired', expired.length, 'rose', 'show-expired')}
     </section>
     <div class="dashboard-grid">
       <section class="card category-card">
@@ -187,7 +189,10 @@ function renderDashboard(active: FoodItem[], expiring: FoodItem[], expired: Food
 function renderItems(active: FoodItem[]): string {
   const matching = active.filter((item) => (state.category === 'all' || item.category === state.category)
     && item.name.toLowerCase().includes(state.search.toLowerCase())
-    && (!state.expiringOnly || item.expirationDate <= addDays(today(), item.notifyWindow ?? alertWindow())))
+    && ((!state.expiringOnly && !state.expiredOnly)
+      || (state.expiringOnly && item.expirationDate >= today()
+        && item.expirationDate <= addDays(today(), item.notifyWindow ?? alertWindow()))
+      || (state.expiredOnly && item.expirationDate < today())))
     .sort((first, second) => state.sort === 'name'
       ? first.name.localeCompare(second.name)
       : state.sort === 'category'
@@ -198,12 +203,16 @@ function renderItems(active: FoodItem[]): string {
       <label class="search-box"><span>⌕</span><input id="search" type="search" placeholder="Search your food…" value="${escapeHtml(state.search)}" /></label>
       <label class="select-box"><span class="sr-only">Filter by category</span><select id="category-filter"><option value="all">All categories</option>${FOOD_CATEGORIES.map((category) => `<option value="${escapeHtml(category)}" ${state.category === category ? 'selected' : ''}>${escapeHtml(category)}</option>`).join('')}</select></label>
       <label class="select-box"><span class="sr-only">Sort items</span><select id="sort-items"><option value="expiration" ${state.sort === 'expiration' ? 'selected' : ''}>Sort: Expiration</option><option value="name" ${state.sort === 'name' ? 'selected' : ''}>Sort: Name</option><option value="category" ${state.sort === 'category' ? 'selected' : ''}>Sort: Category</option></select></label>
+      <div class="status-filters" role="group" aria-label="Filter by expiration status">
+        <label class="status-filter"><input id="expiring-filter" type="checkbox" ${state.expiringOnly ? 'checked' : ''} /><span>Expiring soon</span></label>
+        <label class="status-filter"><input id="expired-filter" type="checkbox" ${state.expiredOnly ? 'checked' : ''} /><span>Expired</span></label>
+      </div>
       <div class="filter-actions"><button class="button secondary" data-action="import">↑ Import CSV</button><button class="button secondary" data-action="export">↓ Export CSV</button></div>
     </section>
     <div id="csv-errors"></div>
     <section class="card pantry-list">
       <div class="list-heading"><span>FOOD ITEM</span><span>EXPIRES</span><span>QUANTITY</span><span></span></div>
-      ${matching.length ? renderFoodList(matching, false, true) : `<div class="empty-state"><span>⌕</span><h2>${active.length ? 'No matching food' : 'Your pantry is ready'}</h2><p>${active.length ? 'Try another search or category.' : 'Add food, or import a CSV to get started.'}</p>${active.length ? '' : '<button class="button primary" data-action="add">＋ Add your first food</button>'}</div>`}
+      ${matching.length ? renderFoodList(matching, false, true) : `<div class="empty-state"><span>⌕</span><h2>${active.length ? 'No matching food' : 'Your pantry is ready'}</h2><p>${active.length ? 'Try another search, category, or expiration filter.' : 'Add food, or import a CSV to get started.'}</p>${active.length ? '' : '<button class="button primary" data-action="add">＋ Add your first food</button>'}</div>`}
     </section>
     <p class="list-footnote">${matching.length} ${matching.length === 1 ? 'item' : 'items'} shown · Quantities update as you use things</p>`;
 }
@@ -236,8 +245,8 @@ function renderSettings(lastSync: string | null, stale: boolean): string {
     </section>`;
 }
 
-function statCard(title: string, value: number, caption: string, tone: string, detail = ''): string {
-  return `<div class="stat-card ${tone}"><div class="stat-top"><span>${title}</span><span class="stat-spark">↗</span></div><strong>${value}${detail ? ` <span class="stat-value-detail">${detail}</span>` : ''}</strong><small>${caption}</small></div>`;
+function statCard(title: string, value: number, tone: string, action: string, detail = ''): string {
+  return `<button type="button" class="stat-card ${tone}" data-action="${action}" aria-label="View ${title.toLowerCase()} items"><span class="stat-top"><span>${title}</span><span class="stat-spark" aria-hidden="true">↗</span></span><strong>${value}${detail ? ` <span class="stat-value-detail">${detail}</span>` : ''}</strong></button>`;
 }
 
 function bucketRow(label: string, count: number, tone: string): string {
@@ -453,6 +462,7 @@ app.addEventListener('click', async (event) => {
   if (tab) {
     state.tab = tab;
     state.expiringOnly = false;
+    state.expiredOnly = false;
     render();
     return;
   }
@@ -484,11 +494,24 @@ app.addEventListener('click', async (event) => {
       return;
     }
     else if (action === 'dismiss') state.error = state.notice = undefined;
-    else if (action === 'show-expiring') {
+    else if (action === 'show-attention') {
       state.tab = 'items';
       state.category = 'all';
       state.search = '';
       state.expiringOnly = true;
+      state.expiredOnly = true;
+    } else if (action === 'show-expiring') {
+      state.tab = 'items';
+      state.category = 'all';
+      state.search = '';
+      state.expiringOnly = true;
+      state.expiredOnly = false;
+    } else if (action === 'show-total' || action === 'show-expired') {
+      state.tab = 'items';
+      state.category = 'all';
+      state.search = '';
+      state.expiringOnly = false;
+      state.expiredOnly = action === 'show-expired';
     } else if (action === 'export') saveCsv();
     else if (action === 'import') {
       csvInput.value = '';
@@ -605,7 +628,13 @@ app.addEventListener('submit', async (event) => {
 app.addEventListener('change', async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
-  if (target.id === 'category-filter') {
+  if (target instanceof HTMLInputElement && target.id === 'expiring-filter') {
+    state.expiringOnly = target.checked;
+    render();
+  } else if (target instanceof HTMLInputElement && target.id === 'expired-filter') {
+    state.expiredOnly = target.checked;
+    render();
+  } else if (target.id === 'category-filter') {
     state.category = target.value;
     render();
   } else if (target.id === 'sort-items') {
