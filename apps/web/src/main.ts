@@ -82,7 +82,6 @@ function render(): void {
   const active = activeItems();
   const expiring = soonItems();
   const expired = active.filter((item) => item.expirationDate < today());
-  const categories = [...new Set(active.map((item) => item.category))].sort();
   const lastSync = localStorage.getItem(settingKeys.lastSync);
   const stale = lastSync ? Date.now() - Date.parse(lastSync) > 24 * 60 * 60 * 1000 : false;
   app!.innerHTML = `
@@ -107,7 +106,7 @@ function render(): void {
         ${state.tab !== 'settings' ? '<button class="button primary add-button" data-action="add">＋ <span>Add food</span></button>' : ''}
       </div>
       ${state.tab === 'dashboard' ? renderDashboard(active, expiring, expired) : ''}
-      ${state.tab === 'items' ? renderItems(active, categories) : ''}
+      ${state.tab === 'items' ? renderItems(active) : ''}
       ${state.tab === 'settings' ? renderSettings(lastSync, stale) : ''}
       <nav class="bottom-nav" aria-label="Main navigation">
         <button class="${state.tab === 'dashboard' ? 'selected' : ''}" data-tab="dashboard"><span>⌂</span>Overview</button>
@@ -173,7 +172,7 @@ function renderDashboard(active: FoodItem[], expiring: FoodItem[], expired: Food
     <p class="privacy-note"><span>◉</span> Your pantry is stored privately on this device. <button data-tab="settings">Learn about sync</button></p>`;
 }
 
-function renderItems(active: FoodItem[], categories: string[]): string {
+function renderItems(active: FoodItem[]): string {
   const matching = active.filter((item) => (state.category === 'all' || item.category === state.category)
     && item.name.toLowerCase().includes(state.search.toLowerCase())
     && (!state.expiringOnly || item.expirationDate <= addDays(today(), item.notifyWindow ?? alertWindow())))
@@ -185,7 +184,7 @@ function renderItems(active: FoodItem[], categories: string[]): string {
   return `
     <section class="card filters">
       <label class="search-box"><span>⌕</span><input id="search" type="search" placeholder="Search your food…" value="${escapeHtml(state.search)}" /></label>
-      <label class="select-box"><span class="sr-only">Filter by category</span><select id="category-filter"><option value="all">All categories</option>${categories.map((category) => `<option ${state.category === category ? 'selected' : ''}>${escapeHtml(category)}</option>`).join('')}</select></label>
+      <label class="select-box"><span class="sr-only">Filter by category</span><select id="category-filter"><option value="all">All categories</option>${FOOD_CATEGORIES.map((category) => `<option value="${escapeHtml(category)}" ${state.category === category ? 'selected' : ''}>${escapeHtml(category)}</option>`).join('')}</select></label>
       <label class="select-box"><span class="sr-only">Sort items</span><select id="sort-items"><option value="expiration" ${state.sort === 'expiration' ? 'selected' : ''}>Sort: Expiration</option><option value="name" ${state.sort === 'name' ? 'selected' : ''}>Sort: Name</option><option value="category" ${state.sort === 'category' ? 'selected' : ''}>Sort: Category</option></select></label>
       <div class="filter-actions"><button class="button secondary" data-action="import">↑ Import CSV</button><button class="button secondary" data-action="export">↓ Export CSV</button><input id="csv-input" type="file" accept=".csv,text/csv" hidden /></div>
     </section>
@@ -262,7 +261,7 @@ function showItemDialog(id?: string): void {
     <form id="item-form" class="item-form">
       <div class="dialog-heading"><div><p class="eyebrow">${item ? 'UPDATE YOUR PANTRY' : 'ADD TO YOUR PANTRY'}</p><h2>${item ? 'Edit food' : 'Add food'}</h2></div><button type="button" class="close-button" data-action="close-dialog" aria-label="Close">×</button></div>
       <label class="field-label" for="item-name">Food name</label><input id="item-name" name="name" class="text-field" required maxlength="120" placeholder="e.g. Whole milk" value="${escapeHtml(item?.name ?? '')}" />
-      <div class="form-pair"><div><label class="field-label" for="item-category">Category</label><input id="item-category" name="category" class="text-field" list="category-options" required value="${escapeHtml(item?.category ?? '')}" placeholder="Choose a category" /><datalist id="category-options">${FOOD_CATEGORIES.map((category) => `<option value="${escapeHtml(category)}">`).join('')}${[...new Set(activeItems().map((entry) => entry.category))].map((category) => `<option value="${escapeHtml(category)}">`).join('')}</datalist></div><div><label class="field-label" for="item-expiration">Expiration date</label><input id="item-expiration" class="text-field" type="date" name="expirationDate" required value="${escapeHtml(item?.expirationDate ?? '')}" /></div></div>
+      <div class="form-pair"><div><label class="field-label" for="item-category">Category</label><select id="item-category" name="category" class="text-field" required><option value="" disabled ${!FOOD_CATEGORIES.some((category) => category === item?.category) ? 'selected' : ''}>Choose a category</option>${FOOD_CATEGORIES.map((category) => `<option value="${escapeHtml(category)}" ${item?.category === category ? 'selected' : ''}>${escapeHtml(category)}</option>`).join('')}</select></div><div><label class="field-label" for="item-expiration">Expiration date</label><input id="item-expiration" class="text-field" type="date" name="expirationDate" required value="${escapeHtml(item?.expirationDate ?? '')}" /></div></div>
       <div class="form-pair"><div><label class="field-label" for="item-quantity">Quantity</label><input id="item-quantity" class="text-field" type="number" name="quantity" min="1" step="1" required value="${item?.quantity ?? 1}" /></div><div><label class="field-label" for="item-calories">Calories per item</label><input id="item-calories" class="text-field" type="number" name="calories" min="0" step="1" required value="${item?.calories ?? 0}" /></div></div>
       <label class="field-label" for="item-notify">Alert window <span class="muted">(optional override)</span></label><div class="inline-field"><input id="item-notify" class="text-field" name="notifyWindow" type="number" min="1" step="1" value="${item?.notifyWindow ?? ''}" placeholder="${alertWindow()}" /><span>days before expiration</span></div>
       <div class="dialog-actions"><button type="button" class="button secondary" data-action="close-dialog">Cancel</button><button class="button primary" type="submit">${item ? 'Save changes' : 'Add to pantry'}</button></div>
