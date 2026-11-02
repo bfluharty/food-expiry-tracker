@@ -16,7 +16,9 @@ curl -X POST "$UPLOAD_ENDPOINT" \
   --data-binary @samples/items.csv
 ```
 
-The CSV requires `name`, `category`, `expiration_date`, and `quantity` headers. Rows are validated as a single transaction: any invalid row rejects the entire upload. Re-uploading the same identity updates its quantity.
+The CSV requires `name`, `category`, `expiration_date`, and `calories` headers. `calories` must be a non-negative integer. `quantity` is optional and defaults to `1` when omitted or blank. `category` must be one of `Meat/Beans`, `Fruit`, `Veggie`, `Nuts/Seeds`, `Snack`, `Grain`, `Misc`, or `Meal`.
+
+The optional `notify_window` column accepts a positive integer number of days for that item. Blank or omitted values use the default in `src/config.ts`. Rows are validated as a single transaction: any invalid row rejects the entire upload. Re-uploading the same identity updates its calories, quantity, and notification window.
 
 ## Configuration
 

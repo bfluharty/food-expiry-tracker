@@ -7,7 +7,7 @@ export interface SlackPayload {
 
 const MAX_BLOCK_TEXT = 3000;
 
-export function buildDigestPayloads(items: FoodItem[], today: string, windowDays: number): SlackPayload[] {
+export function buildDigestPayloads(items: FoodItem[], today: string): SlackPayload[] {
   const sections: string[] = [];
   for (const [date, dateItems] of Object.entries(groupByDate(items))) {
     const heading = `*${date} — ${formatDaysRemaining(daysBetween(today, date))}*`;
@@ -25,11 +25,11 @@ export function buildDigestPayloads(items: FoodItem[], today: string, windowDays
   }
 
   const payloads: SlackPayload[] = [];
-  let blocks = header(windowDays);
+  let blocks = header();
   for (const section of sections) {
     if (blocks.length === 50) {
       payloads.push({ blocks });
-      blocks = header(windowDays);
+      blocks = header();
     }
     blocks.push({ type: 'section', text: { type: 'mrkdwn', text: section } });
   }
@@ -37,8 +37,8 @@ export function buildDigestPayloads(items: FoodItem[], today: string, windowDays
   return payloads;
 }
 
-function header(windowDays: number): SlackPayload['blocks'] {
-  return [{ type: 'header', text: { type: 'plain_text', text: `Food expiring in the next ${windowDays} days` } }];
+function header(): SlackPayload['blocks'] {
+  return [{ type: 'header', text: { type: 'plain_text', text: 'Food expiring soon' } }];
 }
 
 function groupByDate(items: FoodItem[]): Record<string, FoodItem[]> {

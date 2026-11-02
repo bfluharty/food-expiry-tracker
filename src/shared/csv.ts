@@ -2,10 +2,13 @@ import { createHash } from 'node:crypto';
 import { parse } from 'csv-parse/sync';
 import { z } from 'zod';
 import { isValidIsoDate } from './dates.js';
-import type { FoodItem, UploadError } from './types.js';
+import { FOOD_CATEGORIES, type FoodCategory, type FoodItem, type UploadError } from './types.js';
 
-const REQUIRED_HEADERS = ['name', 'category', 'expiration_date', 'quantity'];
+const REQUIRED_HEADERS = ['name', 'category', 'expiration_date', 'calories'];
 const quantitySchema = z.coerce.number().int().min(1);
+const caloriesSchema = z.coerce.number().int().nonnegative();
+const notifyWindowSchema = z.coerce.number().int().positive();
+const categorySchema = z.enum(FOOD_CATEGORIES);
 
 interface ParsedCsvRow {
   record: Record<string, string>;
@@ -50,25 +53,35 @@ export function validateCsv(input: string, updatedAt = new Date().toISOString())
     const name = record.name?.trim() ?? '';
     const category = record.category?.trim() ?? '';
     const expirationDate = record.expiration_date?.trim() ?? '';
-    const rawQuantity = record.quantity?.trim() ?? '';
+    const rawCalories = record.calories?.trim() ?? '';
+    const rawQuantity = record.quantity?.trim() || '1';
+    const rawNotifyWindow = record.notify_window?.trim() ?? '';
     const rowErrors: string[] = [];
     if (!name) rowErrors.push('name must be a non-empty string');
-    if (!category) rowErrors.push('category must be a non-empty string');
+    const parsedCategory = categorySchema.safeParse(category);
+    if (!parsedCategory.success) rowErrors.push(`category must be one of: ${FOOD_CATEGORIES.join(', ')}`);
     if (!isValidIsoDate(expirationDate)) rowErrors.push('expiration_date must be YYYY-MM-DD');
+    const calories = caloriesSchema.safeParse(rawCalories);
+    if (!calories.success) rowErrors.push('calories must be a non-negative integer');
     const quantity = quantitySchema.safeParse(rawQuantity);
     if (!quantity.success) rowErrors.push('quantity must be an integer greater than or equal to 1');
+    const notifyWindow = rawNotifyWindow ? notifyWindowSchema.safeParse(rawNotifyWindow) : undefined;
+    if (notifyWindow && !notifyWindow.success) rowErrors.push('notify_window must be a positive integer');
     if (rowErrors.length > 0) {
       errors.push({ line: info.lines, message: rowErrors.join('; ') });
       continue;
     }
-    const hash = itemHash(name, category, expirationDate);
+    const validCategory = parsedCategory.data as FoodCategory;
+    const hash = itemHash(name, validCategory, expirationDate);
     byKey.set(hash, {
       pk: 'ITEM',
       sk: `${expirationDate}#${hash}`,
       name,
-      category,
+      category: validCategory,
       expirationDate,
+      calories: calories.data ?? 0,
       quantity: quantity.data ?? 0,
+      ...(notifyWindow?.success ? { notifyWindow: notifyWindow.data } : {}),
       updatedAt
     });
   }

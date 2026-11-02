@@ -1,3 +1,3 @@
-name,category,expiration_date,quantity
-Whole Milk,Dairy,2026-11-10,2
-Chicken Breast,Meat,2026-11-05,1
+name,category,expiration_date,calories,quantity,notify_window
+Whole Milk,Meal,2026-11-10,150,2,14
+Chicken Breast,Meat/Beans,2026-11-05,220,1,

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "sam build",
+    "deploy": "sam deploy",
     "test": "vitest run",
     "test:watch": "vitest"
   },

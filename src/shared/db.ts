@@ -18,14 +18,15 @@ export async function writeItems(items: FoodItem[]): Promise<void> {
   }
 }
 
-export async function queryItems(from: string, through: string): Promise<FoodItem[]> {
+/** Returns every item that has not yet expired, preserving DynamoDB's date order. */
+export async function queryUnexpiredItems(today: string): Promise<FoodItem[]> {
   const items: FoodItem[] = [];
   let ExclusiveStartKey: Record<string, unknown> | undefined;
   do {
     const response = await client.send(new QueryCommand({
       TableName: TABLE_NAME,
-      KeyConditionExpression: 'pk = :pk AND sk BETWEEN :from AND :through',
-      ExpressionAttributeValues: { ':pk': 'ITEM', ':from': from, ':through': `${through}~` },
+      KeyConditionExpression: 'pk = :pk AND sk >= :today',
+      ExpressionAttributeValues: { ':pk': 'ITEM', ':today': today },
       ExclusiveStartKey
     }));
     items.push(...((response.Items ?? []) as FoodItem[]));

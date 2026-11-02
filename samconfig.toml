@@ -7,7 +7,7 @@ capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 region = "us-east-1"
 s3_prefix = "food-expiry-tracker"
-disable_rollback = true
+disable_rollback = false
 image_repositories = []
 
 [default.build.parameters]
