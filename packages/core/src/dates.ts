@@ -1,0 +1,5 @@
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+export function isValidIsoDate(value: string): boolean { if (!DATE_RE.test(value)) return false; const [y, m, d] = value.split('-').map(Number); const date = new Date(Date.UTC(y, m - 1, d)); return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d; }
+export function addDays(date: string, days: number): string { const [y, m, d] = date.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10); }
+export function daysBetween(start: string, end: string): number { return Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000); }
+export function todayInTimezone(timezone = 'America/New_York', now = new Date()): string { const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now); const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value; return `${get('year')}-${get('month')}-${get('day')}`; }

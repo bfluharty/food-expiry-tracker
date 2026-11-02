@@ -1,0 +1,18 @@
+{
+  "name": "Pantry — Food expiry tracker",
+  "short_name": "Pantry",
+  "description": "A private, offline-first food expiry tracker.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8f7f3",
+  "theme_color": "#183c31",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { itemHash, validateCsv } from '../src/shared/csv.js';
+import { exportCsv, naturalKey, validateCsv } from '@food-expiry/core';
 
 describe('CSV validation', () => {
   it('normalizes and deduplicates identical item identities using the final row', () => {
@@ -7,7 +7,7 @@ describe('CSV validation', () => {
       'name,category,expiration_date,calories,quantity',
       'Whole Milk,Meal,2026-11-10,200,2',
       'whole milk,Meal,2026-11-10,200,3'
-    ].join('\n'), '2026-01-01T00:00:00.000Z');
+    ].join('\n'));
     expect(result.errors).toEqual([]);
     expect(result.items).toHaveLength(1);
     expect(result.items[0]).toMatchObject({ name: 'whole milk', category: 'Meal', calories: 200, quantity: 3 });
@@ -25,8 +25,9 @@ describe('CSV validation', () => {
     expect(result.errors[1]).toMatchObject({ line: 3 });
   });
 
-  it('uses case-insensitive name and category identity', () => {
-    expect(itemHash('Milk', 'Meal', '2026-11-10')).toBe(itemHash('mILK', 'mEAL', '2026-11-10'));
+  it('uses case-insensitive name and category natural keys', () => {
+    expect(naturalKey({ name: 'Milk', category: 'Meal', expirationDate: '2026-11-10' }))
+      .toBe(naturalKey({ name: 'mILK', category: 'Meal', expirationDate: '2026-11-10' }));
   });
 
   it('accepts an optional positive per-item notification window', () => {
@@ -51,5 +52,23 @@ describe('CSV validation', () => {
     expect(result.items).toEqual([]);
     expect(result.errors[0]?.message).toContain('category must be one of');
     expect(result.errors[0]?.message).toContain('calories must be a non-negative integer');
+  });
+
+  it('round-trips CSV exports without losing item fields', () => {
+    const item = {
+      id: '90bf5a93-dda6-5a7f-9f64-b4eb014513c1',
+      name: 'Whole "Cream" Milk',
+      category: 'Meal' as const,
+      expirationDate: '2026-11-10',
+      calories: 150,
+      quantity: 2,
+      notifyWindow: 14,
+      createdAt: '2026-11-01T10:00:00.000Z',
+      updatedAt: '2026-11-02T10:00:00.000Z'
+    };
+    const exported = exportCsv([item]);
+    const imported = validateCsv(exported);
+    expect(imported.errors).toEqual([]);
+    expect(imported.items).toEqual([item]);
   });
 });

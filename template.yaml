@@ -24,22 +24,39 @@ Resources:
 
   FoodItemsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Delete
     Properties:
-      TableName: FoodItems
+      TableName: FoodItemsV2
       BillingMode: PROVISIONED
       ProvisionedThroughput:
-        ReadCapacityUnits: 5
+        ReadCapacityUnits: 12
         WriteCapacityUnits: 5
       AttributeDefinitions:
-        - AttributeName: pk
+        - AttributeName: id
           AttributeType: S
-        - AttributeName: sk
+        - AttributeName: expirationPk
+          AttributeType: S
+        - AttributeName: expirationSk
           AttributeType: S
       KeySchema:
-        - AttributeName: pk
+        - AttributeName: id
           KeyType: HASH
-        - AttributeName: sk
-          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: ExpirationIndex
+          KeySchema:
+            - AttributeName: expirationPk
+              KeyType: HASH
+            - AttributeName: expirationSk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 12
+            WriteCapacityUnits: 5
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
 
   UploadFunction:
     Type: AWS::Serverless::Function
@@ -62,7 +79,7 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         EntryPoints:
-          - src/upload/handler.ts
+          - services/aws/src/upload/handler.ts
         Target: es2022
         Format: cjs
 
@@ -89,7 +106,55 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         EntryPoints:
-          - src/notify/handler.ts
+          - services/aws/src/notify/handler.ts
+        Target: es2022
+        Format: cjs
+
+  SyncLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/food-expiry-sync
+      RetentionInDays: 14
+
+  SyncFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: food-expiry-sync
+      Timeout: 60
+      CodeUri: .
+      Handler: sync/handler.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref FoodItemsTable
+          SYNC_SECRET_PARAMETER: /food-expiry/sync-api-key
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref SyncLogGroup
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FoodItemsTable
+        - Statement:
+            Effect: Allow
+            Action: ssm:GetParameter
+            Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/food-expiry/sync-api-key
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - https://bfluharty.github.io
+            - http://localhost:5173
+            - http://127.0.0.1:5173
+          AllowMethods:
+            - POST
+          AllowHeaders:
+            - content-type
+            - x-api-key
+          MaxAge: 86400
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - services/aws/src/sync/handler.ts
         Target: es2022
         Format: cjs
 
@@ -130,3 +195,6 @@ Outputs:
     Value: !GetAtt UploadFunctionUrl.FunctionUrl
   TableName:
     Value: !Ref FoodItemsTable
+  SyncEndpoint:
+    Description: POST item changes to this endpoint with the x-api-key header.
+    Value: !GetAtt SyncFunctionUrl.FunctionUrl

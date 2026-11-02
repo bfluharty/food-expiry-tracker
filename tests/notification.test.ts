@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { itemsReadyForNotification } from '../src/shared/notification.js';
-import type { FoodItem } from '../src/shared/types.js';
+import { itemsReadyForNotification } from '@food-expiry/core';
+import type { FoodItem } from '@food-expiry/core';
 
 const item = (expirationDate: string, notifyWindow?: number): FoodItem => ({
-  pk: 'ITEM', sk: `${expirationDate}#id`, name: 'Milk', category: 'Meal', expirationDate, calories: 150, quantity: 1, notifyWindow, updatedAt: ''
+  id: '90bf5a93-dda6-5a7f-9f64-b4eb014513c1',
+  name: 'Milk',
+  category: 'Meal',
+  expirationDate,
+  calories: 150,
+  quantity: 1,
+  notifyWindow,
+  createdAt: '',
+  updatedAt: ''
 });
 
 describe('per-item notification windows', () => {

@@ -8,7 +8,11 @@ export interface SlackPayload {
 const MAX_BLOCK_TEXT = 3000;
 const USER_MENTION = '<@U0CE1LDJY6R>';
 
-export function buildDigestPayloads(items: FoodItem[], today: string): SlackPayload[] {
+export function buildDigestPayloads(
+  items: FoodItem[],
+  today: string,
+  dataLastUpdated?: string
+): SlackPayload[] {
   const sections: string[][] = [];
   for (const [date, dateItems] of Object.entries(groupByDate(items))) {
     const heading = `*${date} — ${formatDaysRemaining(daysBetween(today, date))}*`;
@@ -28,36 +32,44 @@ export function buildDigestPayloads(items: FoodItem[], today: string): SlackPayl
   }
 
   const payloads: SlackPayload[] = [];
-  let blocks = messageIntro(true);
+  const lastUpdatedAt = dataLastUpdated || items
+    .map((item) => item.serverUpdatedAt ?? item.updatedAt)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+  let blocks = messageIntro(true, lastUpdatedAt);
   for (const dateBlocks of sections) {
-    if (dateBlocks.length > 49) {
-      throw new Error('One expiration-date section exceeds Slack’s single-message block limit.');
+    for (const text of dateBlocks) {
+      if (blocks.length === 50) {
+        payloads.push({ blocks });
+        blocks = messageIntro(false, lastUpdatedAt);
+      }
+      blocks.push({ type: 'section', text: { type: 'mrkdwn', text } });
     }
-    if (blocks.length + dateBlocks.length > 50) {
-      payloads.push({ blocks });
-      blocks = messageIntro(false);
-    }
-    blocks.push(...dateBlocks.map((text) => ({ type: 'section' as const, text: { type: 'mrkdwn' as const, text } })));
   }
   payloads.push({ blocks });
   return payloads;
 }
 
-export function buildEmptyDigestPayload(): SlackPayload {
+export function buildEmptyDigestPayload(lastUpdatedAt?: string): SlackPayload {
   return {
     blocks: [
-      ...messageIntro(true),
+      ...messageIntro(true, lastUpdatedAt),
       { type: 'section', text: { type: 'mrkdwn', text: 'Nothing is in the expiration window.' } }
     ]
   };
 }
 
-function messageIntro(includeMention: boolean): SlackPayload['blocks'] {
+function messageIntro(includeMention: boolean, lastUpdatedAt?: string): SlackPayload['blocks'] {
   const title = includeMention ? 'Food expiring soon' : 'Food expiring soon (continued)';
   const blocks: SlackPayload['blocks'] = [
     { type: 'header', text: { type: 'plain_text', text: title } }
   ];
   if (includeMention) blocks.push({ type: 'section', text: { type: 'mrkdwn', text: USER_MENTION } });
+  blocks.push({
+    type: 'context',
+    text: { type: 'mrkdwn', text: `Data last updated: ${lastUpdatedAt ?? 'Not available'}` }
+  });
   return blocks;
 }
 

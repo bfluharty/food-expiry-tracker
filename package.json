@@ -2,8 +2,12 @@
   "name": "food-expiry-tracker",
   "version": "1.0.0",
   "private": true,
+  "workspaces": ["packages/*", "services/*", "apps/*"],
   "scripts": {
-    "build": "sam build",
+    "build": "sam build && npm run build --workspace @food-expiry/web",
+    "build:aws": "sam build",
+    "build:web": "npm run build --workspace @food-expiry/web",
+    "dev": "npm run dev --workspace @food-expiry/web",
     "deploy": "sam deploy",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -20,6 +24,7 @@
     "@types/node": "^22.13.10",
     "esbuild": "^0.25.1",
     "typescript": "^5.8.2",
+    "vite": "^6.2.3",
     "vitest": "^3.0.8"
   }
 }

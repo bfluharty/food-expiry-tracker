@@ -1,0 +1,11 @@
+{
+  "name": "@food-expiry/core",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "csv-parse": "^5.6.0",
+    "zod": "^3.24.2"
+  }
+}

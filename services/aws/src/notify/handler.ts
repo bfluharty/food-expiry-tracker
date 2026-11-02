@@ -1,25 +1,29 @@
 import { notificationWindowDays } from '../config.js';
 import { getSlackWebhookUrl } from '../shared/config.js';
-import { queryUnexpiredItems } from '../shared/db.js';
-import { todayInTimezone } from '../shared/dates.js';
-import { buildDigestPayloads, buildEmptyDigestPayload } from '../shared/digest.js';
-import { itemsReadyForNotification } from '../shared/notification.js';
+import {
+  buildDigestPayloads,
+  buildEmptyDigestPayload,
+  itemsReadyForNotification,
+  todayInTimezone
+} from '@food-expiry/core';
+import { getLastDataUpdatedAt, queryNotificationItems } from '../shared/db.js';
 
 export async function handler(): Promise<void> {
   const webhookUrl = await getSlackWebhookUrl();
   if (!webhookUrl) throw new Error('Missing required SSM parameter /food-expiry/slack-webhook-url');
   const today = todayInTimezone();
   const items = itemsReadyForNotification(
-    await queryUnexpiredItems(today),
+    await queryNotificationItems(today, '9999-12-31'),
     today,
     notificationWindowDays
   );
+  const lastUpdatedAt = await getLastDataUpdatedAt();
   if (items.length === 0) {
     console.info('No food items are expiring within the notification window.');
-    await postToSlack(webhookUrl, buildEmptyDigestPayload());
+    await postToSlack(webhookUrl, buildEmptyDigestPayload(lastUpdatedAt));
     return;
   }
-  for (const payload of buildDigestPayloads(items, today)) {
+  for (const payload of buildDigestPayloads(items, today, lastUpdatedAt)) {
     await postToSlack(webhookUrl, payload);
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, isValidIsoDate, todayInTimezone } from '../src/shared/dates.js';
+import { addDays, isValidIsoDate, todayInTimezone } from '@food-expiry/core';
 
 describe('date utilities', () => {
   it('rejects calendar-invalid ISO dates', () => {
