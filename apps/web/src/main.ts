@@ -15,6 +15,8 @@ import './styles.css';
 
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('Pantry application root element was not found.');
+const csvInput = document.querySelector<HTMLInputElement>('#csv-input');
+if (!csvInput) throw new Error('Pantry CSV import control was not found.');
 
 const repository = new IndexedDbItemRepository();
 const settingKeys = {
@@ -186,7 +188,7 @@ function renderItems(active: FoodItem[]): string {
       <label class="search-box"><span>⌕</span><input id="search" type="search" placeholder="Search your food…" value="${escapeHtml(state.search)}" /></label>
       <label class="select-box"><span class="sr-only">Filter by category</span><select id="category-filter"><option value="all">All categories</option>${FOOD_CATEGORIES.map((category) => `<option value="${escapeHtml(category)}" ${state.category === category ? 'selected' : ''}>${escapeHtml(category)}</option>`).join('')}</select></label>
       <label class="select-box"><span class="sr-only">Sort items</span><select id="sort-items"><option value="expiration" ${state.sort === 'expiration' ? 'selected' : ''}>Sort: Expiration</option><option value="name" ${state.sort === 'name' ? 'selected' : ''}>Sort: Name</option><option value="category" ${state.sort === 'category' ? 'selected' : ''}>Sort: Category</option></select></label>
-      <div class="filter-actions"><button class="button secondary" data-action="import">↑ Import CSV</button><button class="button secondary" data-action="export">↓ Export CSV</button><input id="csv-input" type="file" accept=".csv,text/csv" hidden /></div>
+      <div class="filter-actions"><button class="button secondary" data-action="import">↑ Import CSV</button><button class="button secondary" data-action="export">↓ Export CSV</button></div>
     </section>
     <div id="csv-errors"></div>
     <section class="card pantry-list">
@@ -451,7 +453,10 @@ app.addEventListener('click', async (event) => {
       state.search = '';
       state.expiringOnly = true;
     } else if (action === 'export') saveCsv();
-    else if (action === 'import') document.querySelector<HTMLInputElement>('#csv-input')?.click();
+    else if (action === 'import') {
+      csvInput.value = '';
+      csvInput.click();
+    }
     else if (action === 'save-window') {
       const input = document.querySelector<HTMLInputElement>('#alert-window');
       const value = Number(input?.value);
@@ -570,15 +575,19 @@ app.addEventListener('change', async (event) => {
       return first.expirationDate.localeCompare(second.expirationDate);
     });
     render();
-  } else if (target.id === 'csv-input' && target instanceof HTMLInputElement && target.files?.[0]) {
-    try {
-      await importCsv(target.files[0]);
-      scheduleSync();
-    } catch (error) {
-      showError(error);
-    } finally {
-      target.value = '';
-    }
+  }
+});
+
+csvInput.addEventListener('change', async () => {
+  const file = csvInput.files?.[0];
+  if (!file) return;
+  try {
+    await importCsv(file);
+    scheduleSync();
+  } catch (error) {
+    showError(error);
+  } finally {
+    csvInput.value = '';
   }
 });
 
