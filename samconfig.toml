@@ -1,0 +1,16 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "food-expiry-tracker"
+resolve_s3 = true
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+region = "us-east-1"
+s3_prefix = "food-expiry-tracker"
+disable_rollback = true
+image_repositories = []
+
+[default.build.parameters]
+template_file = "c:\\Users\\Ben\\Desktop\\Projects\\food-expiry-tracker\\template.yaml"
+cached = true
+parallel = true

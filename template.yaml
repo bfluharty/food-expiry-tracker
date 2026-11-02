@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Food expiration tracker
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures:
+      - arm64
+    Timeout: 15
+    MemorySize: 256
+    LoggingConfig:
+      LogFormat: JSON
+      LogGroup: !Ref ApplicationLogGroup
+
+Resources:
+  ApplicationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
+  FoodItemsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: FoodItems
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+
+  UploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: food-expiry-uploader
+      CodeUri: .
+      Handler: upload/handler.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref FoodItemsTable
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref FoodItemsTable
+      FunctionUrlConfig:
+        AuthType: NONE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/upload/handler.ts
+        Target: es2022
+        Format: esm
+
+  NotifyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: food-expiry-notifier
+      CodeUri: .
+      Handler: notify/handler.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref FoodItemsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FoodItemsTable
+        - Statement:
+            Effect: Allow
+            Action: ssm:GetParameters
+            Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/food-expiry/*
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/notify/handler.ts
+        Target: es2022
+        Format: esm
+
+  SchedulerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeNotifyFunction
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt NotifyFunction.Arn
+
+  DailyNotificationSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Description: Send the daily food expiration digest at 8 AM Eastern.
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      ScheduleExpression: cron(0 8 * * ? *)
+      ScheduleExpressionTimezone: America/New_York
+      Target:
+        Arn: !GetAtt NotifyFunction.Arn
+        RoleArn: !GetAtt SchedulerExecutionRole.Arn
+
+Outputs:
+  UploadEndpoint:
+    Description: POST CSV files to this endpoint.
+    Value: !GetAtt UploadFunctionUrl.FunctionUrl
+  TableName:
+    Value: !Ref FoodItemsTable
