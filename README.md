@@ -31,6 +31,8 @@ sam deploy
 
 The digest runs daily at 08:00 in `America/New_York`. The Slack webhook remains a SecureString in SSM and is cached for the lifetime of a warm Lambda container.
 
+Every daily run posts a Slack message. When no items are within their notification windows, the message says: “Nothing is in the expiration window.” CloudWatch logs are retained for 14 days in `/aws/lambda/food-expiry-uploader` and `/aws/lambda/food-expiry-notifier`.
+
 ## Test
 
 ```sh

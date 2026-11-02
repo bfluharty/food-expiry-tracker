@@ -9,14 +9,17 @@ Globals:
       - arm64
     Timeout: 15
     MemorySize: 256
-    LoggingConfig:
-      LogFormat: JSON
-      LogGroup: !Ref ApplicationLogGroup
-
 Resources:
-  ApplicationLogGroup:
+  UploadLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
+      LogGroupName: /aws/lambda/food-expiry-uploader
+      RetentionInDays: 14
+
+  NotifyLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/food-expiry-notifier
       RetentionInDays: 14
 
   FoodItemsTable:
@@ -47,6 +50,9 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref FoodItemsTable
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref UploadLogGroup
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref FoodItemsTable
@@ -58,7 +64,7 @@ Resources:
         EntryPoints:
           - src/upload/handler.ts
         Target: es2022
-        Format: esm
+        Format: cjs
 
   NotifyFunction:
     Type: AWS::Serverless::Function
@@ -69,12 +75,15 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref FoodItemsTable
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref NotifyLogGroup
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref FoodItemsTable
         - Statement:
             Effect: Allow
-            Action: ssm:GetParameters
+            Action: ssm:GetParameter
             Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/food-expiry/*
     Metadata:
       BuildMethod: esbuild
@@ -82,7 +91,7 @@ Resources:
         EntryPoints:
           - src/notify/handler.ts
         Target: es2022
-        Format: esm
+        Format: cjs
 
   SchedulerExecutionRole:
     Type: AWS::IAM::Role
