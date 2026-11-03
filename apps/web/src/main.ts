@@ -143,10 +143,12 @@ function renderDashboard(active: FoodItem[], expiring: FoodItem[], expired: Food
     return {
       category,
       items,
-      units: items.reduce((total, item) => total + item.quantity, 0)
+      units: items.reduce((total, item) => total + item.quantity, 0),
+      calories: items.reduce((total, item) => total + item.calories * item.quantity, 0)
     };
   }).filter((group) => group.items.length > 0)
     .sort((first, second) => Number(first.category === 'Misc') - Number(second.category === 'Misc'));
+  const maxCalories = Math.max(0, ...byCategory.map((group) => group.category === 'Misc' ? 0 : group.calories));
   const weeks = Array.from({ length: 8 }, (_, index) => {
     const start = addDays(today(), index * 7);
     const end = addDays(start, 6);
@@ -168,8 +170,8 @@ function renderDashboard(active: FoodItem[], expiring: FoodItem[], expired: Food
     <div class="dashboard-grid">
       <section class="card category-card">
         <div class="section-title"><div><p class="eyebrow">YOUR INVENTORY</p><h2>By category</h2></div><span class="section-icon">◒</span></div>
-        ${byCategory.length ? `<div class="category-list">${byCategory.map((group) => `
-          <div class="category-row"><div class="category-label"><span>${escapeHtml(group.category)}</span><strong>${group.items.length} <small>${group.items.length === 1 ? 'item' : 'items'} · ${group.units} total units</small></strong></div></div>
+        ${byCategory.length ? `<div class="category-bars">${byCategory.map((group) => `
+          <div class="category-row"><div class="category-label"><span>${escapeHtml(group.category)}</span><strong>${group.items.length} <small>${group.items.length === 1 ? 'item' : 'items'} · ${group.units} total units${group.category === 'Misc' ? '' : ` · ${group.calories.toLocaleString()} total cal`}</small></strong></div>${group.category === 'Misc' ? '' : `<div class="bar-track"><span style="width:${maxCalories ? group.calories / maxCalories * 100 : 0}%"></span></div>`}</div>
         `).join('')}</div>` : '<p class="empty-note">Add your first food item to see your inventory here.</p>'}
       </section>
       <section class="card expiry-card">
