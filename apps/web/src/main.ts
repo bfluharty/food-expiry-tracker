@@ -311,6 +311,24 @@ function showDeleteConfirmation(id: string): void {
   dialog.querySelector<HTMLButtonElement>('[data-action="cancel-delete"]')?.focus();
 }
 
+function showUsedConfirmation(id: string): void {
+  const item = state.items.find((candidate) => candidate.id === id);
+  const dialog = document.querySelector<HTMLDialogElement>('#item-dialog');
+  if (!item || !dialog) return;
+  state.editingId = undefined;
+  const removesLastItem = item.quantity === 1;
+  dialog.innerHTML = `
+    <section class="delete-confirmation" aria-labelledby="used-confirmation-title">
+      <div class="dialog-heading"><div><p class="eyebrow">UPDATE YOUR PANTRY</p><h2 id="used-confirmation-title">${removesLastItem ? 'Remove the last item?' : 'Mark one as used?'}</h2></div><button type="button" class="close-button" data-action="cancel-used" aria-label="Close">×</button></div>
+      <p class="settings-copy">${removesLastItem
+        ? `This is your last <strong>${escapeHtml(item.name)}</strong>. Using it will remove it from your pantry.`
+        : `Are you sure you want to subtract one <strong>${escapeHtml(item.name)}</strong> from your pantry?`}</p>
+      <div class="dialog-actions"><button type="button" class="button secondary" data-action="cancel-used">Cancel</button><button type="button" class="button ${removesLastItem ? 'danger' : 'primary'}" data-action="confirm-used" data-id="${escapeHtml(id)}">${removesLastItem ? 'Remove food' : 'Use one'}</button></div>
+    </section>`;
+  dialog.showModal();
+  dialog.querySelector<HTMLButtonElement>('[data-action="cancel-used"]')?.focus();
+}
+
 function formInput(form: HTMLFormElement): FoodItemInput {
   const data = new FormData(form);
   const name = String(data.get('name') ?? '').trim();
@@ -488,6 +506,9 @@ app.addEventListener('click', async (event) => {
     } else if (action === 'cancel-delete') {
       document.querySelector<HTMLDialogElement>('#item-dialog')?.close();
       return;
+    } else if (action === 'cancel-used') {
+      document.querySelector<HTMLDialogElement>('#item-dialog')?.close();
+      return;
     } else if (action === 'dismiss-update') {
       state.updateAvailable = false;
       render();
@@ -556,6 +577,9 @@ app.addEventListener('click', async (event) => {
     } else if (action === 'delete' && id) {
       showDeleteConfirmation(id);
       return;
+    } else if (action === 'used' && id) {
+      showUsedConfirmation(id);
+      return;
     } else if (action === 'confirm-delete' && id) {
       const item = state.items.find((candidate) => candidate.id === id);
       if (!item) throw new Error('The item no longer exists.');
@@ -571,6 +595,14 @@ app.addEventListener('click', async (event) => {
       }
       window.setTimeout(() => document.querySelector('#toast')?.classList.remove('visible'), 5000);
       return;
+    } else if (action === 'confirm-used' && id) {
+      const item = state.items.find((candidate) => candidate.id === id);
+      if (!item) throw new Error('The item no longer exists.');
+      document.querySelector<HTMLDialogElement>('#item-dialog')?.close();
+      if (item.quantity <= 1) await repository.delete(id);
+      else await repository.update(id, { ...item, quantity: item.quantity - 1 });
+      scheduleSync();
+      state.notice = item.quantity <= 1 ? `${item.name} was removed from your pantry.` : `One ${item.name} marked as used.`;
     } else if (action === 'undo' && id) {
       const item = state.items.find((candidate) => candidate.id === id);
       if (item) {
@@ -578,14 +610,6 @@ app.addEventListener('click', async (event) => {
         scheduleSync();
       }
       flash('Item restored.');
-    } else if (action === 'used' && id) {
-      const item = state.items.find((candidate) => candidate.id === id);
-      if (item) {
-        if (item.quantity <= 1) await repository.delete(id);
-        else await repository.update(id, { ...item, quantity: item.quantity - 1 });
-        scheduleSync();
-        state.notice = item.quantity <= 1 ? `${item.name} was removed from your pantry.` : `One ${item.name} marked as used.`;
-      }
     }
     await reload();
   } catch (error) {
