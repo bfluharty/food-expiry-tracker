@@ -210,7 +210,8 @@ dialog::backdrop { background: #183c3155; backdrop-filter: blur(2px); }
   .food-avatar { width: 32px; height: 32px; }
   .expiry-label { grid-column: 2; grid-row: 2; font-size: 10px; }
   .expiry-label small { display: inline; margin-left: 5px; }
-  .quantity-label { display: none; }
+  .quantity-label { display: block; grid-column: 1; grid-row: 2; align-self: start; font-size: 11px; }
+  .quantity-label small { display: none; }
   .row-actions { grid-column: 3; grid-row: 1 / span 2; opacity: 1; }
   .row-actions .mini-button { width: 25px; }
   .bottom-nav { display: flex; position: fixed; z-index: 10; bottom: 0; left: 0; right: 0; padding: 7px 12px max(8px, env(safe-area-inset-bottom)); justify-content: space-around; background: #fff; border-top: 1px solid #e9ece5; }
