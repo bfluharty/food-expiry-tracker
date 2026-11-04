@@ -25,7 +25,7 @@ Build both the AWS stack and web app with `npm run build`; build only the PWA wi
 
 ## CSV format
 
-CSV files require `name`, `category`, `expiration_date`, and `calories`. `calories` is a non-negative integer; `quantity` is optional and defaults to `1`. Categories are `Meat/Beans`, `Fruit`, `Veggie`, `Nuts/Seeds`, `Snack`, `Grain`, `Misc`, and `Meal`. The optional `notify_window` column is a positive number of days. An invalid row rejects the entire import; duplicate natural keys use the last row. The app can export a CSV backup at any time.
+CSV files require `name`, `category`, `expiration_date`, and `calories`. `calories` is a non-negative integer; `quantity` is optional and defaults to `1`. Categories are `Fruit`, `Grain`, `Meal`, `Meat/Beans`, `Medicine`, `Nuts/Seeds`, `Snack`, and `Veggie`, with `Misc` last. The optional `notify_window` column is a positive number of days. An invalid row rejects the entire import; duplicate natural keys use the last row. The app can export a CSV backup at any time.
 
 ## AWS backend
 

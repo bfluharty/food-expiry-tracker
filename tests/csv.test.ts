@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { exportCsv, naturalKey, validateCsv } from '@food-expiry/core';
+import { FOOD_CATEGORIES, exportCsv, naturalKey, validateCsv } from '@food-expiry/core';
 
 describe('CSV validation', () => {
+  it('keeps categories alphabetized with Misc last and accepts Medicine', () => {
+    expect(FOOD_CATEGORIES.at(-1)).toBe('Misc');
+    expect(FOOD_CATEGORIES.slice(0, -1)).toEqual(
+      [...FOOD_CATEGORIES.slice(0, -1)].sort((first, second) => first.localeCompare(second))
+    );
+    const result = validateCsv('name,category,expiration_date,calories\nPain reliever,Medicine,2026-11-10,0');
+    expect(result.errors).toEqual([]);
+    expect(result.items[0]?.category).toBe('Medicine');
+  });
+
   it('normalizes and deduplicates identical item identities using the final row', () => {
     const result = validateCsv([
       'name,category,expiration_date,calories,quantity',

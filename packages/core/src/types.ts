@@ -1,4 +1,4 @@
-export const FOOD_CATEGORIES = ['Meat/Beans', 'Fruit', 'Veggie', 'Nuts/Seeds', 'Snack', 'Grain', 'Misc', 'Meal'] as const;
+export const FOOD_CATEGORIES = ['Fruit', 'Grain', 'Meal', 'Meat/Beans', 'Medicine', 'Nuts/Seeds', 'Snack', 'Veggie', 'Misc'] as const;
 export type FoodCategory = typeof FOOD_CATEGORIES[number];
 
 export interface FoodItemInput {

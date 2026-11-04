@@ -147,7 +147,9 @@ function renderDashboard(active: FoodItem[], expiring: FoodItem[], expired: Food
       calories: items.reduce((total, item) => total + item.calories * item.quantity, 0)
     };
   }).filter((group) => group.items.length > 0)
-    .sort((first, second) => Number(first.category === 'Misc') - Number(second.category === 'Misc'));
+    .sort((first, second) =>
+      Number(first.category === 'Misc') - Number(second.category === 'Misc')
+      || first.category.localeCompare(second.category));
   const maxCalories = Math.max(0, ...byCategory.map((group) => group.category === 'Misc' ? 0 : group.calories));
   const weeks = Array.from({ length: 8 }, (_, index) => {
     const start = addDays(today(), index * 7);
