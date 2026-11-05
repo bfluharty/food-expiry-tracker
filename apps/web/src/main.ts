@@ -5,6 +5,7 @@ import {
   expirationBucket,
   exportCsv,
   isValidIsoDate,
+  syncRequestError,
   validateCsv,
   type FoodItem,
   type FoodItemInput,
@@ -421,11 +422,16 @@ async function syncNow(): Promise<void> {
   const localChanges = (await repository.list(true)).filter((item) => item.syncPending);
   const sent = new Map(localChanges.map((item) => [item.id, item]));
   const outgoing = localChanges.slice(0, 100).map(({ syncPending: _pending, ...item }) => item);
+  const savedCursor = localStorage.getItem('food-expiry.sync-cursor');
+  const cursor = savedCursor && Number.isFinite(Date.parse(savedCursor)) ? savedCursor : undefined;
+  const syncRequest = { ...(cursor ? { cursor } : {}), changes: outgoing };
+  const validationError = syncRequestError(syncRequest);
+  if (validationError) throw new Error(`Cannot sync local changes: ${validationError} Edit the affected item and try again.`);
   const flaggedDuplicates = new Set(state.items.filter((item) => item.possibleDuplicate).map((item) => item.id));
   const response = await fetch(`${parsedEndpoint.toString().replace(/\/+$/, '')}/sync`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': secret },
-    body: JSON.stringify({ cursor: localStorage.getItem('food-expiry.sync-cursor') ?? undefined, changes: outgoing })
+    body: JSON.stringify(syncRequest)
   });
   if (!response.ok) {
     let detail = '';

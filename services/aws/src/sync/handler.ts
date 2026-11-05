@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { LambdaFunctionURLEvent, LambdaFunctionURLResult } from 'aws-lambda';
-import { FOOD_CATEGORIES, isValidIsoDate, type FoodItem, type SyncRequest } from '@food-expiry/core';
+import { isSyncRequest, syncRequestError, type FoodItem, type SyncRequest } from '@food-expiry/core';
 import { GetCommand, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
@@ -9,7 +9,6 @@ import { updateLastDataUpdatedAt } from '../shared/db.js';
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const tableName = process.env.TABLE_NAME ?? '';
-const maxChanges = 100;
 const retentionDays = 90;
 const cursorOverlapMs = 2 * 60 * 1000;
 
@@ -36,8 +35,10 @@ export async function handler(event: LambdaFunctionURLEvent): Promise<LambdaFunc
     } catch {
       return response(400, { error: 'Request body must be valid JSON.' });
     }
+    const validationError = syncRequestError(parsed);
+    if (validationError) return response(400, { error: validationError });
+    if (!isSyncRequest(parsed)) throw new Error('Sync request validation produced inconsistent results.');
     const request = validateRequest(parsed);
-    if (!request) return response(400, { error: 'Request must contain a valid cursor and up to 100 valid item changes.' });
 
     const cursorTime = request.cursor ? Date.parse(request.cursor) : 0;
     const changed = new Map<string, FoodItem>();
@@ -114,42 +115,19 @@ export async function handler(event: LambdaFunctionURLEvent): Promise<LambdaFunc
   }
 }
 
-function validateRequest(value: unknown): SyncRequest | undefined {
-  if (typeof value !== 'object' || value === null || !('changes' in value)) return undefined;
-  const candidate = value as { cursor?: unknown; changes: unknown };
-  if (candidate.cursor !== undefined
-    && (typeof candidate.cursor !== 'string' || !Number.isFinite(Date.parse(candidate.cursor)))) return undefined;
-  if (!Array.isArray(candidate.changes) || candidate.changes.length > maxChanges) return undefined;
-  const changes: FoodItem[] = [];
-  for (const value of candidate.changes) {
-    if (typeof value !== 'object' || value === null) return undefined;
-    const item = value as Record<string, unknown>;
-    if (typeof item.id !== 'string'
-      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.id)
-      || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 120
-      || typeof item.category !== 'string' || !FOOD_CATEGORIES.includes(item.category as typeof FOOD_CATEGORIES[number])
-      || typeof item.expirationDate !== 'string' || !isValidIsoDate(item.expirationDate)
-      || typeof item.calories !== 'number' || !Number.isInteger(item.calories) || item.calories < 0
-      || typeof item.quantity !== 'number' || !Number.isInteger(item.quantity) || item.quantity < 1
-      || typeof item.createdAt !== 'string' || !Number.isFinite(Date.parse(item.createdAt))
-      || typeof item.updatedAt !== 'string' || !Number.isFinite(Date.parse(item.updatedAt))
-      || (item.notifyWindow !== undefined
-        && (typeof item.notifyWindow !== 'number' || !Number.isInteger(item.notifyWindow) || item.notifyWindow < 1))
-      || (item.deletedAt !== undefined
-        && (typeof item.deletedAt !== 'string' || !Number.isFinite(Date.parse(item.deletedAt))))) return undefined;
-    changes.push({
-      id: item.id,
-      name: item.name.trim(),
-      category: item.category as FoodItem['category'],
-      expirationDate: item.expirationDate,
-      calories: item.calories,
-      quantity: item.quantity,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-      ...(typeof item.notifyWindow === 'number' ? { notifyWindow: item.notifyWindow } : {}),
-      ...(typeof item.deletedAt === 'string' ? { deletedAt: item.deletedAt } : {})
-    });
-  }
+function validateRequest(candidate: SyncRequest): SyncRequest {
+  const changes: FoodItem[] = candidate.changes.map((item) => ({
+    id: item.id,
+    name: item.name.trim(),
+    category: item.category,
+    expirationDate: item.expirationDate,
+    calories: item.calories,
+    quantity: item.quantity,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    ...(typeof item.notifyWindow === 'number' ? { notifyWindow: item.notifyWindow } : {}),
+    ...(typeof item.deletedAt === 'string' ? { deletedAt: item.deletedAt } : {})
+  }));
   return {
     ...(typeof candidate.cursor === 'string' ? { cursor: candidate.cursor } : {}),
     changes
